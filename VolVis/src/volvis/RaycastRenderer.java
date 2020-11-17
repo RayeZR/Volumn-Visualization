@@ -192,7 +192,7 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
         int yl = (int) Math.floor(dy);
         int zl = (int) Math.floor(dz);
         
-        // TODO: consider when xu, yu, zu out of the volume
+        // TODO: consider when xu, yu, zu out of the volume - Done
         double alpha = dx - xl;
         double beta = dy - yl;
         double gamma = dz - zl;
@@ -260,7 +260,56 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
      */
     private VoxelGradient getGradientTrilinear(double[] coord) {
         // TODO 6: Implement Tri-linear interpolation for gradients
-        return ZERO_GRADIENT;
+//        return ZERO_GRADIENT;
+
+        // Get the coordinates
+        double dx = coord[0], dy = coord[1], dz = coord[2];
+
+        // Verify they are inside the volume gradient
+        if (dx < 0 || dx > (gradients.getDimX() - 2) || dy < 0 || dy > (gradients.getDimY() - 2)
+                || dz < 0 || dz > (gradients.getDimZ() - 2)) {
+
+            // If not, just return a zero gradient
+            return ZERO_GRADIENT;
+        }
+
+        // Get the closest x, y, z to dx, dy, dz that are integers
+        // This is important as our data is discrete (not continuous)
+        int xl = (int) Math.floor(dx);
+        int yl = (int) Math.floor(dy);
+        int zl = (int) Math.floor(dz);
+        
+        float alpha = (float) (dx - xl);
+        float beta = (float) (dy - yl);
+        float gamma = (float) (dz - zl);
+//        System.out.printf("%f, %f, %f\n", alpha, beta, gamma);
+
+        int xu = gradients.getDimX() - 1 > xl ? (xl + 1) : xl;
+        int yu = gradients.getDimY() - 1 > yl ? (yl + 1) : yl;
+        int zu = gradients.getDimZ() - 1 > zl ? (zl + 1) : zl;
+
+        
+        float[] sx0 = gradients.getGradientVec(xl, yl, zl);
+        float[] sx1 = gradients.getGradientVec(xu, yl, zl);
+        float[] sx2 = gradients.getGradientVec(xl, yu, zl);
+        float[] sx3 = gradients.getGradientVec(xu, yu, zl);
+        float[] sx4 = gradients.getGradientVec(xl, yl, zu);
+        float[] sx5 = gradients.getGradientVec(xu, yl, zu);
+        float[] sx6 = gradients.getGradientVec(xl, yu, zu);
+        float[] sx7 = gradients.getGradientVec(xu, yu, zu);
+        
+        float[] grad_vec = new float[3];
+        for(int i = 0; i < 3; i++){
+            grad_vec[i] = (1 - alpha) * (1-beta) * (1-gamma) * sx0[i] + alpha * (1 - beta) *(1 - gamma) * sx1[i] +
+                 (1 - alpha) * beta * (1 - gamma) * sx2[i] + alpha * beta * (1 - gamma)* sx3[i] +
+                 (1 - alpha) * (1 - beta) * gamma * sx4[i] + alpha * (1 - beta) * gamma * sx5[i] +
+                 (1 - alpha) * beta * gamma * sx6[i] + alpha * beta * gamma * sx7[i];
+        }
+        
+        VoxelGradient sx = new VoxelGradient(grad_vec[0], grad_vec[1], grad_vec[2]);
+
+        // Finally, get the gradient from GradientVolume for the corresponding coordinates
+        return sx;
     }
 
     /**
@@ -471,7 +520,8 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
         int nrSamples = 1 + (int) Math.floor(VectorMath.distance(entryPoint, exitPoint) / sampleStep);
         
         double[] currentPos = new double[3];
-        VectorMath.setVector(currentPos, entryPoint[0], entryPoint[1], entryPoint[2]);
+//        VectorMath.setVector(currentPos, entryPoint[0], entryPoint[1], entryPoint[2]);
+        VectorMath.setVector(currentPos, exitPoint[0], exitPoint[1], exitPoint[2]);
 
         
         //Initialization of the colors as floating point values
@@ -483,16 +533,13 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
         TFColor voxel_color = new TFColor();
         TFColor colorAux = new TFColor();
         
-        TFColor prev_color = new TFColor(0, 0, 0, 0);
+        TFColor prev_color = new TFColor(0, 0, 0, 1);
         TFColor curr_color = new TFColor();
 
         // TODO 2: To be Implemented this function. Now, it just gives back a constant color depending on the mode
         switch (modeFront) {
             case COMPOSITING:
                 // 1D transfer function 
-//                int value = getVoxel(currentPos);
-//                voxel_color = tFuncFront.getColor(value);
-                    
                 do {
                     int value = getVoxelTrilinear(currentPos);
                     voxel_color = tFuncFront.getColor(value);
@@ -504,7 +551,8 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
                     prev_color = curr_color;
 
                     for (int i = 0; i < 3; i++) {
-                        currentPos[i] += lightVector[i];
+//                        currentPos[i] += lightVector[i];
+                        currentPos[i] -= lightVector[i];
                     }
                     
                     
@@ -590,6 +638,10 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
         int increment = 1;
         // sample step in voxel units
         int sampleStep = 1;
+        if(this.interactiveMode){
+//            increment = 2;
+            sampleStep = 5;
+        }
 
         // reset the image to black
         resetImage();
