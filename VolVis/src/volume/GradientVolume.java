@@ -17,6 +17,7 @@ public class GradientVolume {
         dimZ = vol.getDimZ();
         data = new VoxelGradient[dimX * dimY * dimZ];
         compute();
+//        System.out.printf("%f\n", data[87 + dimX * (98 + dimY * 94)].x);
         maxmag = -1.0;
     }
 
@@ -72,7 +73,7 @@ public class GradientVolume {
                     float dx = (float) 0.5 * (volume.getVoxel(i + 1, j, k) - volume.getVoxel(i - 1, j, k));
                     float dy = (float) 0.5 * (volume.getVoxel(i, j + 1, k) - volume.getVoxel(i, j - 1, k));
                     float dz = (float) 0.5 * (volume.getVoxel(i, j, k + 1) - volume.getVoxel(i, j, k - 1));
-                    data[i] = new VoxelGradient(dx, dy, dz);
+                    data[i + dimX * (j + dimY * k)] = new VoxelGradient(dx, dy, dz); 
                 }
             }
         }

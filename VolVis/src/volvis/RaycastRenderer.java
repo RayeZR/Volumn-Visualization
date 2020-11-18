@@ -26,6 +26,11 @@ import java.lang.System;
  * @author Humberto Garcia
  */
 public class RaycastRenderer extends Renderer implements TFChangeListener {
+    
+    private double k_a = 0.1;
+    private double k_d = 0.7;
+    private double k_s = 0.2;
+    private int hl_alpha = 100;
 
     /**
      * Volume that is loaded and visualized.
@@ -249,6 +254,12 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
         int z = (int) Math.round(dz);
 
         // Finally, get the gradient from GradientVolume for the corresponding coordinates
+//        VoxelGradient grad = gradients.getGradient(x, y, z);
+//        System.out.printf("%f, %f, %f\n", grad.x, grad.y, grad.z);
+//        System.out.printf("%d, %d, %d\n", x, y, z);
+//        System.out.printf("%f\n", gradients.getGradient(87, 98, 94).x);
+//        float[] vec = gradients.getGradientVec(x, y, z);
+//        System.out.printf("%f, %f, %f\n", vec[0], vec[1], vec[2]);
         return gradients.getGradient(x, y, z);
     }
 
@@ -458,7 +469,8 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
 
         //the current position is initialized as the entry point
         double[] currentPos = new double[3];
-        VectorMath.setVector(currentPos, entryPoint[0], entryPoint[1], entryPoint[2]);
+//        VectorMath.setVector(currentPos, entryPoint[0], entryPoint[1], entryPoint[2]);
+        VectorMath.setVector(currentPos, exitPoint[0], exitPoint[1], exitPoint[2]);
         
         // TODO 3: Implement isosurface rendering.
         //Initialization of the colors as floating point values
@@ -468,9 +480,19 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
         double opacity = 0;
         
         double eps = 0.0005;
-        //////////how to retrieve the set isovalue?
-//        double isovalue = 95.0;
-        
+     
+//        do {
+//            double value = getVoxel(currentPos);
+//            if (value - this.isoValueFront >= eps) {
+//                alpha = 1;
+//                break;
+//            }
+//            for (int i = 0; i < 3; i++) {
+//                currentPos[i] += lightVector[i];
+//            }
+//            nrSamples--;
+//        } while (nrSamples > 0);
+
         do {
             double value = getVoxel(currentPos);
             if (value - this.isoValueFront >= eps) {
@@ -478,18 +500,60 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
                 break;
             }
             for (int i = 0; i < 3; i++) {
-                currentPos[i] += lightVector[i];
+//                currentPos[i] += lightVector[i];
+                currentPos[i] -= lightVector[i];
             }
             nrSamples--;
         } while (nrSamples > 0);
+        
+//        TFColor voxel_color = new TFColor();
+//        TFColor colorAux = new TFColor();
+//        
+//        TFColor prev_color = new TFColor(isoColorFront.r, isoColorFront.g, isoColorFront.b, 1);
+//        TFColor curr_color = new TFColor(0, 0, 0, 0);
+//
+//        do {
+//                int value = getVoxelTrilinear(currentPos);
+//                if (value - this.isoValueFront >= eps){
+//                    voxel_color = tFuncFront.getColor(value);
+//                    curr_color.a = 1;
+//                    voxel_color.a = 1;
+////                    curr_color.a = (1 - voxel_color.a) * prev_color.a + voxel_color.a;
+//                    curr_color.r = (1 - voxel_color.a) * prev_color.r + voxel_color.a * voxel_color.r;
+//                    curr_color.g = (1 - voxel_color.a) * prev_color.g + voxel_color.a * voxel_color.g;
+//                    curr_color.b = (1 - voxel_color.a) * prev_color.b + voxel_color.a * voxel_color.b;
+//                    prev_color = curr_color;
+//                }
+//
+//                for (int i = 0; i < 3; i++) {
+////                        currentPos[i] += lightVector[i];
+//                    currentPos[i] -= lightVector[i];
+//                }
+//
+//
+//                nrSamples--;
+//            } while (nrSamples > 0);
+
+
 
         // isoColorFront contains the isosurface color from the GUI
         r = isoColorFront.r;
         g = isoColorFront.g;
         b = isoColorFront.b;
 //        alpha = 1.0;
+        TFColor shaded_color = new TFColor(r, g, b, alpha);
+//        TFColor shaded_color = new TFColor(curr_color.r, curr_color.g, curr_color.b, curr_color.a);
+
+        if(shadingMode){
+//            VoxelGradient voxel_grad = getGradient(currentPos);
+            VoxelGradient voxel_grad = getGradientTrilinear(currentPos);
+//            System.out.printf("%f %f %f\n", currentPos[0], currentPos[1], currentPos[2]);
+//            System.out.printf("%f %f %f\n", getGradient(currentPos).x, getGradientTrilinear(currentPos).y, voxel_grad.z);
+            shaded_color = computePhongShading(shaded_color, voxel_grad, lightVector, rayVector);
+        }
         //computes the color
-        int color = computePackedPixelColor(r, g, b, alpha);
+//        int color = computePackedPixelColor(r, g, b, alpha);
+        int color = computePackedPixelColor(shaded_color.r, shaded_color.g, shaded_color.b, shaded_color.a);
         return color;
     }
 
@@ -596,6 +660,7 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
 
         //computes the color
         int color = computePackedPixelColor(r, g, b, alpha);
+//        System.out.printf("color=%d\n", color);
         return color;
     }
 
@@ -613,7 +678,68 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
             double[] rayVector) {
 
         // TODO 7: Implement Phong Shading.
-        TFColor color = new TFColor(0, 0, 0, 1);
+        TFColor color = new TFColor(0.0, 0.0, 0.0, 1.0);
+        
+        double[] L_vec = new double[3];
+        double[] N_vec = new double[3];
+        double[] H_vec = new double[3];
+        double eps = 0.0005;
+        
+        VectorMath.setVector(L_vec, -rayVector[0], -rayVector[1], -rayVector[2]);
+        double L_mag = Math.sqrt(L_vec[0] * L_vec[0] + L_vec[1] * L_vec[1] + L_vec[2] * L_vec[2]);
+        for(int i = 0; i < 3; i++){
+            L_vec[i] /= (L_mag + eps);
+        }
+        
+        N_vec[0] = gradient.x / (gradient.mag + eps);
+        N_vec[1] = gradient.y / (gradient.mag + eps);
+        N_vec[2] = gradient.z / (gradient.mag + eps);
+        VectorMath.setVector(H_vec, L_vec[0], L_vec[1], L_vec[2]);
+   
+        double L_dot_N = VectorMath.dotproduct(L_vec, N_vec);
+        double N_dot_H = VectorMath.dotproduct(N_vec, H_vec);
+        
+        if(L_dot_N <= 0 || N_dot_H <= 0){
+//            System.out.printf("%f, %f\n", L_dot_N, N_dot_H);
+            voxel_color.a = 0;
+            return voxel_color;
+        }
+
+//      // slide, simplified formula 
+        color.r = 0 + voxel_color.r * k_d * L_dot_N + k_s * Math.pow(N_dot_H, hl_alpha);
+        color.g = 0 + voxel_color.g * k_d * L_dot_N + k_s * Math.pow(N_dot_H, hl_alpha);
+        color.b = 0 + voxel_color.b * k_d * L_dot_N + k_s * Math.pow(N_dot_H, hl_alpha);
+        
+        // Liu, too bright
+//        color.r = voxel_color.r * (k_a + 1.5 * (k_d * L_dot_N + k_s * N_dot_H));
+//        color.g = voxel_color.g * (k_a + 1.5 * (k_d * L_dot_N + k_s * N_dot_H));
+//        color.b = voxel_color.b * (k_a + 1.5 * (k_d * L_dot_N + k_s * N_dot_H));
+
+          // modified from Liu's, still very bright
+//        color.r = voxel_color.r * (k_a + 1.5 * (k_d * L_dot_N + k_s * Math.pow(N_dot_H, hl_alpha)));
+//        color.g = voxel_color.g * (k_a + 1.5 * (k_d * L_dot_N + k_s * Math.pow(N_dot_H, hl_alpha)));
+//        color.b = voxel_color.b * (k_a + 1.5 * (k_d * L_dot_N + k_s * Math.pow(N_dot_H, hl_alpha)));
+
+        // another slide from Liu
+//        color.r = voxel_color.r * (k_a + k_d * L_dot_N) + k_s * Math.pow(N_dot_H, hl_alpha);
+//        color.g = voxel_color.g * (k_a + k_d * L_dot_N) + k_s * Math.pow(N_dot_H, hl_alpha);
+//        color.b = voxel_color.b * (k_a + k_d * L_dot_N) + k_s * Math.pow(N_dot_H, hl_alpha);
+        
+        // paper, color is not correct (gray!)
+//        color.r = voxel_color.r * k_a + (k_d * L_dot_N + k_s * Math.pow(N_dot_H, hl_alpha));
+//        color.g = voxel_color.g * k_a + (k_d * L_dot_N + k_s * Math.pow(N_dot_H, hl_alpha));
+//        color.b = voxel_color.b * k_a + (k_d * L_dot_N + k_s * Math.pow(N_dot_H, hl_alpha));
+
+        // paper, remove the power, becomes brighter, still gray
+//        color.r = voxel_color.r * k_a + (k_d * L_dot_N + k_s * N_dot_H);
+//        color.g = voxel_color.g * k_a + (k_d * L_dot_N + k_s * N_dot_H);
+//        color.b = voxel_color.b * k_a + (k_d * L_dot_N + k_s * N_dot_H);
+
+//        System.out.printf("%f, %f, %f\n", voxel_color.r, voxel_color.g, voxel_color.b); // (1.0, 1.0, 0)
+//        System.out.printf("%f, %f, %f\n", gradient.x, gradient.y, gradient.z);
+//        System.out.printf("%f, %f, %f\n", color.r, color.g, color.b);
+        color.a = voxel_color.a;
+//        System.out.printf("color\n");
 
         return color;
     }
@@ -726,6 +852,11 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
         double opacity = 0.0;
 
         // TODO 8: Implement weight based opacity.
+//        TransferFunction2DEditor.TriangleWidget triangleWidget = tfEditor2DFront.triangleWidget;
+//        short baseIntensity = triangleWidget.baseIntensity;
+//        double radius = triangleWidget.radius;
+//        TFColor color = triangleWidget.color;
+
         return opacity;
     }
 

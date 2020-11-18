@@ -299,7 +299,7 @@ public class TransferFunction2DEditor extends javax.swing.JPanel {
         changed();
     }//GEN-LAST:event_opacityLabelActionPerformed
 
-/*    public class TriangleWidget {
+    public class TriangleWidget {
 
         public short baseIntensity;
         public double radius;
@@ -312,7 +312,7 @@ public class TransferFunction2DEditor extends javax.swing.JPanel {
             this.color = new TFColor(0.0, 204.0/255.0, 153.0/255.0, 0.3);
         }
     }
-*/
+
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JButton colorButton;
     private javax.swing.JTextField intensityLabel;
