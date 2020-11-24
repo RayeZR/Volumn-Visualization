@@ -73,7 +73,7 @@ public class GradientVolume {
                     float dx = (float) 0.5 * (volume.getVoxel(i + 1, j, k) - volume.getVoxel(i - 1, j, k));
                     float dy = (float) 0.5 * (volume.getVoxel(i, j + 1, k) - volume.getVoxel(i, j - 1, k));
                     float dz = (float) 0.5 * (volume.getVoxel(i, j, k + 1) - volume.getVoxel(i, j, k - 1));
-                    setGradient(i,j, k, new VoxelGradient(dx, dy, dz)); 
+                    setGradient(i, j, k, new VoxelGradient(dx, dy, dz)); 
                 }
             }
         }
