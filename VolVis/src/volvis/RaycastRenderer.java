@@ -488,7 +488,7 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
         TFColor voxel_color = new TFColor();
         TFColor prev_color = new TFColor(0, 0, 0, 0);
         TFColor curr_color = new TFColor();
-
+        
         // TODO 2: To be Implemented this function. Now, it just gives back a constant color depending on the mode
         switch (modeFront) {
             case COMPOSITING:
@@ -544,7 +544,7 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
                     }
                     nrSamples--;
                 } while (nrSamples > 0);
-                
+        
                 break;
                 
             case TRANSFER2D:
@@ -577,9 +577,15 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
                     
                     nrSamples--;
                 } while (nrSamples > 0);
-
-                break;
         }
+
+        if (shadingMode) {
+             // Shading mode on
+             if(curr_color.a > 0){
+                 VoxelGradient voxel_grad = getGradientTrilinear(currentPos);
+                 curr_color = computePhongShading(curr_color, voxel_grad, lightVector, rayVector);
+             }
+         }
 
         r = curr_color.r;
         g = curr_color.g;
