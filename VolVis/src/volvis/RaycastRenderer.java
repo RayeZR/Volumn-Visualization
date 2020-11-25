@@ -561,9 +561,18 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
                 do {
                     int voxelValue = getVoxelTrilinear(currentPos);
                     VoxelGradient voxel_grad = getGradientTrilinear(currentPos);
+                    
+                    voxel_color.r = set_color.r;
+                    voxel_color.g = set_color.g;
+                    voxel_color.b = set_color.b;
+                    voxel_color.a = set_color.a;
+                    
+                    if (shadingMode){
+                        voxel_color = computePhongShading(voxel_color, voxel_grad, lightVector, rayVector);
+                    }
                                     
                     voxel_color.a = computeOpacity2DTF(material_value, material_r, voxelValue, voxel_grad.mag);
-                    
+
                     curr_color.r = prev_color.r + voxel_color.r * voxel_color.a * (1 - prev_color.a);
                     curr_color.g = prev_color.g + voxel_color.g * voxel_color.a * (1 - prev_color.a);
                     curr_color.b = prev_color.b + voxel_color.b * voxel_color.a * (1 - prev_color.a);
@@ -715,14 +724,14 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
 //        color.b = k_a + voxel_color.b * k_d * L_dot_N + k_s * Math.pow(N_dot_H, hl_alpha);       
 
 //        // modify I_a
-//        color.r = voxel_color.r * k_a + voxel_color.r * k_d * L_dot_N + k_s * Math.pow(N_dot_H, hl_alpha);
-//        color.g = voxel_color.g * k_a + voxel_color.g * k_d * L_dot_N + k_s * Math.pow(N_dot_H, hl_alpha);
-//        color.b = voxel_color.b * k_a + voxel_color.b * k_d * L_dot_N + k_s * Math.pow(N_dot_H, hl_alpha);
+        color.r = voxel_color.r * k_a + voxel_color.r * k_d * L_dot_N + k_s * Math.pow(N_dot_H, hl_alpha);
+        color.g = voxel_color.g * k_a + voxel_color.g * k_d * L_dot_N + k_s * Math.pow(N_dot_H, hl_alpha);
+        color.b = voxel_color.b * k_a + voxel_color.b * k_d * L_dot_N + k_s * Math.pow(N_dot_H, hl_alpha);
 
 //        // KTH slide
-        color.r = voxel_color.r * (k_a + k_d * L_dot_N) + k_s * Math.pow(N_dot_H, hl_alpha);
-        color.g = voxel_color.g * (k_a + k_d * L_dot_N) + k_s * Math.pow(N_dot_H, hl_alpha);
-        color.b = voxel_color.b * (k_a + k_d * L_dot_N) + k_s * Math.pow(N_dot_H, hl_alpha);
+//        color.r = voxel_color.r * (k_a + k_d * L_dot_N) + k_s * Math.pow(N_dot_H, hl_alpha);
+//        color.g = voxel_color.g * (k_a + k_d * L_dot_N) + k_s * Math.pow(N_dot_H, hl_alpha);
+//        color.b = voxel_color.b * (k_a + k_d * L_dot_N) + k_s * Math.pow(N_dot_H, hl_alpha);
         
 
 //        System.out.printf("%f, %f, %f\n", voxel_color.r, voxel_color.g, voxel_color.b); // (1.0, 1.0, 0)
