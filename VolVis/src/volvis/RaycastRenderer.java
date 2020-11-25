@@ -503,7 +503,7 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
 //                        VoxelGradient voxel_grad = getGradientTrilinear(currentPos);
 //                        voxel_color = computePhongShading(voxel_color, voxel_grad, lightVector, rayVector);
 //                    }
-////                    voxel_color.a = tFuncFront.getColor(value).a;
+//                    voxel_color.a = tFuncFront.getColor(value).a;
 //                    
 //                    // ray tracing with 1D tf
 //                    curr_color.a = (1 - voxel_color.a) * prev_color.a + voxel_color.a;
@@ -578,14 +578,6 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
                     nrSamples--;
                 } while (nrSamples > 0);
         }
-
-        if (shadingMode) {
-             // Shading mode on
-             if(curr_color.a > 0){
-                 VoxelGradient voxel_grad = getGradientTrilinear(currentPos);
-                 curr_color = computePhongShading(curr_color, voxel_grad, lightVector, rayVector);
-             }
-         }
 
         r = curr_color.r;
         g = curr_color.g;
@@ -718,9 +710,9 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
 //        }
         
         // our slide, simplified formula
-        color.r = k_a + voxel_color.r * k_d * L_dot_N + k_s * Math.pow(N_dot_H, hl_alpha);
-        color.g = k_a + voxel_color.g * k_d * L_dot_N + k_s * Math.pow(N_dot_H, hl_alpha);
-        color.b = k_a + voxel_color.b * k_d * L_dot_N + k_s * Math.pow(N_dot_H, hl_alpha);       
+//        color.r = k_a + voxel_color.r * k_d * L_dot_N + k_s * Math.pow(N_dot_H, hl_alpha);
+//        color.g = k_a + voxel_color.g * k_d * L_dot_N + k_s * Math.pow(N_dot_H, hl_alpha);
+//        color.b = k_a + voxel_color.b * k_d * L_dot_N + k_s * Math.pow(N_dot_H, hl_alpha);       
 
 //        // modify I_a
 //        color.r = voxel_color.r * k_a + voxel_color.r * k_d * L_dot_N + k_s * Math.pow(N_dot_H, hl_alpha);
@@ -728,9 +720,9 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
 //        color.b = voxel_color.b * k_a + voxel_color.b * k_d * L_dot_N + k_s * Math.pow(N_dot_H, hl_alpha);
 
 //        // KTH slide
-//        color.r = voxel_color.r * (k_a + k_d * L_dot_N) + k_s * Math.pow(N_dot_H, hl_alpha);
-//        color.g = voxel_color.g * (k_a + k_d * L_dot_N) + k_s * Math.pow(N_dot_H, hl_alpha);
-//        color.b = voxel_color.b * (k_a + k_d * L_dot_N) + k_s * Math.pow(N_dot_H, hl_alpha);
+        color.r = voxel_color.r * (k_a + k_d * L_dot_N) + k_s * Math.pow(N_dot_H, hl_alpha);
+        color.g = voxel_color.g * (k_a + k_d * L_dot_N) + k_s * Math.pow(N_dot_H, hl_alpha);
+        color.b = voxel_color.b * (k_a + k_d * L_dot_N) + k_s * Math.pow(N_dot_H, hl_alpha);
         
 
 //        System.out.printf("%f, %f, %f\n", voxel_color.r, voxel_color.g, voxel_color.b); // (1.0, 1.0, 0)
