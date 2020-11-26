@@ -198,7 +198,6 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
         int yl = (int) Math.floor(dy);
         int zl = (int) Math.floor(dz);
         
-        // TODO: consider when xu, yu, zu out of the volume - Done
         double alpha = dx - xl;
         double beta = dy - yl;
         double gamma = dz - zl;
@@ -459,7 +458,7 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
      * @param sampleStep Sample step of the ray.
      * @return Color assigned to a ray/pixel.
      */
-    private int traceRayComposite(double[] entryPoint, double[] exitPoint, double[] rayVector, double sampleStep) {
+    private int traceRayComposite(double[] entryPoint, double[] exitPoint, double[] rayVector, double sampleStep, int planeFlag) {
         double[] lightVector = new double[3];
         double[] increments = new double[3];
         
@@ -475,8 +474,6 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
         
         // To get the correct result accumulate from exit Point since the ray is pointing from viewer to the object
         VectorMath.setVector(currentPos, entryPoint[0], entryPoint[1], entryPoint[2]);
-//        VectorMath.setVector(currentPos, exitPoint[0], exitPoint[1], exitPoint[2]);
-
         
         //Initialization of the colors as floating point values
         double r, g, b;
@@ -489,40 +486,27 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
         TFColor prev_color = new TFColor(0, 0, 0, 0);
         TFColor curr_color = new TFColor();
         
+        RaycastMode mode;
+        if (planeFlag == 1){
+            mode = modeFront;
+        }
+        else{
+            mode = modeBack;
+        }
+        
+        
         // TODO 2: To be Implemented this function. Now, it just gives back a constant color depending on the mode
-        switch (modeFront) {
+        switch (mode) {
             case COMPOSITING:
-                // 1D transfer function 
-//                do {
-//                    int value = getVoxelTrilinear(currentPos);
-//                    voxel_color = tFuncFront.getColor(value);
-////                    System.out.printf("curr: %f, %f, %f\n", currentPos[0], currentPos[1], currentPos[2]);
-//                    
-//                    // shading for color
-//                    if (shadingMode){
-//                        VoxelGradient voxel_grad = getGradientTrilinear(currentPos);
-//                        voxel_color = computePhongShading(voxel_color, voxel_grad, lightVector, rayVector);
-//                    }
-//                    voxel_color.a = tFuncFront.getColor(value).a;
-//                    
-//                    // ray tracing with 1D tf
-//                    curr_color.a = (1 - voxel_color.a) * prev_color.a + voxel_color.a;
-//                    curr_color.r = (1 - voxel_color.a) * prev_color.r + voxel_color.a * voxel_color.r;
-//                    curr_color.g = (1 - voxel_color.a) * prev_color.g + voxel_color.a * voxel_color.g;
-//                    curr_color.b = (1 - voxel_color.a) * prev_color.b + voxel_color.a * voxel_color.b;
-//                    prev_color = curr_color;
-//
-//                    for (int i = 0; i < 3; i++) {
-////                        currentPos[i] += increments[i];
-//                        currentPos[i] -= increments[i];
-//                    }
-//                    nrSamples--;
-//                } while (nrSamples > 0);
-                
-                
+                // 1D transfer function             
                 do {
                     int value = getVoxelTrilinear(currentPos);
-                    voxel_color = tFuncFront.getColor(value);
+                    if (planeFlag == 1){
+                        voxel_color = tFuncFront.getColor(value);
+                    }
+                    else{
+                        voxel_color = tFuncBack.getColor(value);
+                    }
 //                    System.out.printf("curr: %f, %f, %f\n", currentPos[0], currentPos[1], currentPos[2]);
                     
                     // shading for color
@@ -540,7 +524,6 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
 
                     for (int i = 0; i < 3; i++) {
                         currentPos[i] += increments[i];
-//                        currentPos[i] -= increments[i];
                     }
                     nrSamples--;
                 } while (nrSamples > 0);
@@ -549,10 +532,20 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
                 
             case TRANSFER2D:
                 // 2D transfer function 
+                double material_value;
+                double material_r;
+                TFColor set_color;
+                if (planeFlag == 1){
+                    material_value = tfEditor2DFront.tf2D.baseIntensity;
+                    material_r = tfEditor2DFront.tf2D.radius;
+                    set_color = tfEditor2DFront.tf2D.color;
+                }
+                else{
+                    material_value = tfEditor2DBack.tf2D.baseIntensity;
+                    material_r = tfEditor2DBack.tf2D.radius;
+                    set_color = tfEditor2DBack.tf2D.color;
+                }
                 
-                double material_value = tfEditor2DFront.tf2D.baseIntensity;
-                double material_r = tfEditor2DFront.tf2D.radius;
-                TFColor set_color = tfEditor2DFront.tf2D.color;
                 voxel_color.r = set_color.r;
                 voxel_color.g = set_color.g;
                 voxel_color.b = set_color.b;
@@ -571,7 +564,7 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
                         voxel_color = computePhongShading(voxel_color, voxel_grad, lightVector, rayVector);
                     }
                                     
-                    voxel_color.a = computeOpacity2DTF(material_value, material_r, voxelValue, voxel_grad.mag);
+                    voxel_color.a = computeOpacity2DTF(material_value, material_r, voxelValue, voxel_grad.mag, set_color.a);
 
                     curr_color.r = prev_color.r + voxel_color.r * voxel_color.a * (1 - prev_color.a);
                     curr_color.g = prev_color.g + voxel_color.g * voxel_color.a * (1 - prev_color.a);
@@ -612,7 +605,7 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
      * @return Color assigned to a ray/pixel.
      */
     
-    private int traceRayIso(double[] entryPoint, double[] exitPoint, double[] rayVector, double sampleStep) {
+    private int traceRayIso(double[] entryPoint, double[] exitPoint, double[] rayVector, double sampleStep, int planeFlag) {
 
         double[] lightVector = new double[3];
         double[] increments = new double[3];
@@ -633,6 +626,21 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
         VectorMath.setVector(currentPos, entryPoint[0], entryPoint[1], entryPoint[2]);
         double distance = VectorMath.distance(entryPoint, exitPoint);
         int nrSamples = 1 + (int) Math.floor(VectorMath.distance(entryPoint, exitPoint) / sampleStep);
+        
+        float isoValue = 0;
+        TFColor isoColor = new TFColor();
+        if (planeFlag == 1){
+            isoValue = this.isoValueFront;
+            isoColor.r = isoColorFront.r;
+            isoColor.g = isoColorFront.g;
+            isoColor.b = isoColorFront.b;
+        }
+        else{
+            isoValue = this.isoValueBack;
+            isoColor.r = isoColorBack.r;
+            isoColor.g = isoColorBack.g;
+            isoColor.b = isoColorBack.b;
+        }
         do {
             double value = getVoxelTrilinear(currentPos);
             if (value - this.isoValueFront >= eps) {
@@ -648,9 +656,12 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
 
 
         // isoColorFront contains the isosurface color from the GUI
-        r = isoColorFront.r;
-        g = isoColorFront.g;
-        b = isoColorFront.b;
+//        r = isoColorFront.r;
+//        g = isoColorFront.g;
+//        b = isoColorFront.b;
+        r = isoColor.r;
+        g = isoColor.g;
+        b = isoColor.b;
         //computes the color
         int color = computePackedPixelColor(r, g, b, alpha);
         
@@ -708,25 +719,30 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
         N[2] = gradient.z / (gradient.mag + eps);
 
    
-        double L_dot_N = Math.max(VectorMath.dotproduct(L, N), 0.0);
-        double N_dot_H = Math.max(VectorMath.dotproduct(N, H), 0.0);
+//        double L_dot_N = Math.max(VectorMath.dotproduct(L, N), 0.0);
+//        double N_dot_H = Math.max(VectorMath.dotproduct(N, H), 0.0);
+        double L_dot_N = Math.abs(VectorMath.dotproduct(L, N));
+        double N_dot_H = Math.abs(VectorMath.dotproduct(N, H));
+
         
-//        double L_dot_N = VectorMath.dotproduct(L, N);
-//        double N_dot_H = VectorMath.dotproduct(N, H);
-//        
-//        if(L_dot_N <= 0 || N_dot_H <= 0){
-//            return voxel_color;
-//        }
-        
-        // our slide, simplified formula
+        // our slide, simplified formula - I_a ?
 //        color.r = k_a + voxel_color.r * k_d * L_dot_N + k_s * Math.pow(N_dot_H, hl_alpha);
 //        color.g = k_a + voxel_color.g * k_d * L_dot_N + k_s * Math.pow(N_dot_H, hl_alpha);
-//        color.b = k_a + voxel_color.b * k_d * L_dot_N + k_s * Math.pow(N_dot_H, hl_alpha);       
+//        color.b = k_a + voxel_color.b * k_d * L_dot_N + k_s * Math.pow(N_dot_H, hl_alpha);
+
+        // Our slide, I_a as voxel_color, incorrect result
+//        color.r = voxel_color.r + voxel_color.r * k_d * L_dot_N + k_s * Math.pow(N_dot_H, hl_alpha);
+//        color.g = voxel_color.g + voxel_color.g * k_d * L_dot_N + k_s * Math.pow(N_dot_H, hl_alpha);
+//        color.b = voxel_color.b + voxel_color.b * k_d * L_dot_N + k_s * Math.pow(N_dot_H, hl_alpha); 
 
 //        // modify I_a
         color.r = voxel_color.r * k_a + voxel_color.r * k_d * L_dot_N + k_s * Math.pow(N_dot_H, hl_alpha);
         color.g = voxel_color.g * k_a + voxel_color.g * k_d * L_dot_N + k_s * Math.pow(N_dot_H, hl_alpha);
         color.b = voxel_color.b * k_a + voxel_color.b * k_d * L_dot_N + k_s * Math.pow(N_dot_H, hl_alpha);
+
+//        color.r = voxel_color.r * (k_a + k_d * L_dot_N + k_s * Math.pow(N_dot_H, hl_alpha));
+//        color.g = voxel_color.g * (k_a + k_d * L_dot_N + k_s * Math.pow(N_dot_H, hl_alpha));
+//        color.b = voxel_color.b * (k_a + k_d * L_dot_N + k_s * Math.pow(N_dot_H, hl_alpha));
 
 //        // KTH slide
 //        color.r = voxel_color.r * (k_a + k_d * L_dot_N) + k_s * Math.pow(N_dot_H, hl_alpha);
@@ -765,7 +781,7 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
         // sample step in voxel units
         int sampleStep = 1;
         if(this.interactiveMode){
-//            increment = 2;
+//            increment = 4;
             sampleStep = 5;
         }
 
@@ -811,23 +827,84 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
                 // TODO 9: Implement logic for cutting plane.
                 if ((entryPoint[0] > -1.0) && (exitPoint[0] > -1.0)) {
                     int val = 0;
-                    switch (modeFront) {
-                        case COMPOSITING:
-                        case TRANSFER2D:
-                            val = traceRayComposite(entryPoint, exitPoint, rayVector, sampleStep);
-                            break;
-                        case MIP:
-                            val = traceRayMIP(entryPoint, exitPoint, rayVector, sampleStep);
-                            break;
-                        case ISO_SURFACE:
-                            val = traceRayIso(entryPoint, exitPoint, rayVector, sampleStep);
-                            break;
+
+                    double[] dir_vec = new double[3];
+                    double dir = 0;
+                    int planeFlag = 0;
+                    for (int k = 0; k < 3; k++){
+                        dir_vec[k] = entryPoint[k] - planePoint[k];
                     }
-                    for (int ii = i; ii < i + increment; ii++) {
-                        for (int jj = j; jj < j + increment; jj++) {
-                            image.setRGB(ii, jj, val);
+                    dir = 0;
+                    for (int k = 0; k < 3; k++){
+                        dir += dir_vec[k] * planeNorm[k];
+                    }
+                    if (cuttingPlaneMode){
+                        if (dir >= 0){
+                            planeFlag = 1;
+                            switch (modeFront) {
+                                case COMPOSITING:
+                                case TRANSFER2D:
+                                    val = traceRayComposite(entryPoint, exitPoint, rayVector, sampleStep, planeFlag);
+                                    break;
+                                case MIP:
+                                    val = traceRayMIP(entryPoint, exitPoint, rayVector, sampleStep);
+                                    break;
+                                case ISO_SURFACE:
+                                    val = traceRayIso(entryPoint, exitPoint, rayVector, sampleStep, planeFlag);
+                                    break;
+                            }
+                            for (int ii = i; ii < i + increment; ii++) {
+                                for (int jj = j; jj < j + increment; jj++) {
+                                    image.setRGB(ii, jj, val);
+                                }
+                            }
+                        }
+                        else{
+                            planeFlag = -1;
+                            switch (modeBack) {
+                                case COMPOSITING:
+                                case TRANSFER2D:
+                                    val = traceRayComposite(entryPoint, exitPoint, rayVector, sampleStep, planeFlag);
+                                    break;
+                                case MIP:
+                                    val = traceRayMIP(entryPoint, exitPoint, rayVector, sampleStep);
+                                    break;
+                                case ISO_SURFACE:
+                                    val = traceRayIso(entryPoint, exitPoint, rayVector, sampleStep, planeFlag);
+                                    break;
+                            }
+                            for (int ii = i; ii < i + increment; ii++) {
+                                for (int jj = j; jj < j + increment; jj++) {
+                                    image.setRGB(ii, jj, val);
+                                }
+                            }
                         }
                     }
+                    else{
+                        planeFlag = 1;
+                        switch (modeFront) {
+                                case COMPOSITING:
+                                case TRANSFER2D:
+                                    val = traceRayComposite(entryPoint, exitPoint, rayVector, sampleStep, planeFlag);
+                                    break;
+                                case MIP:
+                                    val = traceRayMIP(entryPoint, exitPoint, rayVector, sampleStep);
+                                    break;
+                                case ISO_SURFACE:
+                                    val = traceRayIso(entryPoint, exitPoint, rayVector, sampleStep, planeFlag);
+                                    break;
+                            }
+                            for (int ii = i; ii < i + increment; ii++) {
+                                for (int jj = j; jj < j + increment; jj++) {
+                                    image.setRGB(ii, jj, val);
+                                }
+                            }
+                    }
+                
+                
+                
+                
+                
                 }
 
             }
@@ -847,37 +924,36 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
      * @return
      */
     public double computeOpacity2DTF(double material_value, double material_r,
-            double voxelValue, double gradMagnitude) {
+            double voxelValue, double gradMagnitude, double set_opacity) {
 
         double opacity = 0.0;
         double radius = material_r / gradients.getMaxGradientMagnitude();
-        double set_opacity = tfEditor2DFront.tf2D.color.a;
+//        double set_opacity = tfEditor2DFront.tf2D.color.a;
          
         // TODO 8: Implement weight based opacity.
-        if ((Math.abs(gradMagnitude - 0) <= eps) && 
-                (Math.abs(voxelValue - material_value) <= eps)){
-            opacity = set_opacity;
-        }
-        else if (Math.abs(gradMagnitude) > eps && 
-                (voxelValue - radius * Math.abs(gradMagnitude) - material_value <= eps) && 
-                (material_value - voxelValue - radius * Math.abs(gradMagnitude) <= eps)){
-            opacity = set_opacity * (1 - 1 / radius * Math.abs((material_value - voxelValue) / gradMagnitude));
-        }
-        else {
-            opacity = 0;
-        }
-
-        
-//        if (gradMagnitude == 0 && voxelValue == material_value) {
+//        if ((Math.abs(gradMagnitude - 0) <= eps) && 
+//                (Math.abs(voxelValue - material_value) <= eps)){
 //            opacity = set_opacity;
 //        }
-//        else if (gradMagnitude > 0 && (voxelValue - radius * gradMagnitude <= material_value) &&
-//                 (voxelValue + radius * gradMagnitude >= material_value)){
+//        else if (Math.abs(gradMagnitude) > eps && 
+//                (voxelValue - radius * Math.abs(gradMagnitude) - material_value <= eps) && 
+//                (material_value - voxelValue - radius * Math.abs(gradMagnitude) <= eps)){
 //            opacity = set_opacity * (1 - 1 / radius * Math.abs((material_value - voxelValue) / gradMagnitude));
 //        }
 //        else {
 //            opacity = 0;
 //        }
+        
+        if (gradMagnitude == 0 && voxelValue == material_value) {
+            opacity = set_opacity;
+        }
+        else if (gradMagnitude > 0 && (voxelValue - radius * gradMagnitude <= material_value) &&
+                 (voxelValue + radius * gradMagnitude >= material_value)){
+            opacity = set_opacity * (1 - 1 / radius * Math.abs((material_value - voxelValue) / gradMagnitude));
+        }
+        else {
+            opacity = 0;
+        }
 
         return opacity;
     }
