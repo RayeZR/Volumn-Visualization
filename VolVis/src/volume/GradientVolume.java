@@ -17,7 +17,6 @@ public class GradientVolume {
         dimZ = vol.getDimZ();
         data = new VoxelGradient[dimX * dimY * dimZ];
         compute();
-//        System.out.printf("%f\n", data[87 + dimX * (98 + dimY * 94)].x);
         maxmag = -1.0;
     }
 
@@ -26,6 +25,7 @@ public class GradientVolume {
     }
     
     public float[] getGradientVec(int x, int y, int z) {
+        // A function to return the gradient of a voxel as a three-dimensional vector.
         float[] vec = new float[3];
         vec[0] = this.getGradient(x, y, z).x;
         vec[1] = this.getGradient(x, y, z).y;
@@ -67,6 +67,9 @@ public class GradientVolume {
         for (int i = 0; i < data.length; i++) {
             data[i] = zero;
         }
+        // Start from coordinates(1, 1, 1) to compute the gradient (dx, dy, dz) by taking the central difference
+        // of each direction.
+        // The boundary gradients are left to be (0, 0, 0).
         for (int i = 1; i < dimX - 1; i++){
             for (int j = 1; j < dimY - 1; j++){
                 for (int k = 1; k < dimZ - 1; k ++){
